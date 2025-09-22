@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: authentication-server
+  
+  # Database Configuration
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driverClassName: org.h2.Driver
+    username: sa
+    password: password
+  
+  # H2 Console (for development)
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  
+  # JPA Configuration
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  
+  # Server Configuration
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+# Application specific properties
+app:
+  # JWT Secret Key (Change this in production!)
+  jwtSecret: mySecretKey1234567890abcdefghijklmnopqrstuvwxyz
+  # JWT expiration time in milliseconds (24 hours)
+  jwtExpirationInMs: 86400000
+  # Refresh token expiration time in milliseconds (7 days)
+  refreshTokenExpirationInMs: 604800000
+  
+  # OAuth2 Configuration
+  oauth2:
+    google:
+      clientId: your-google-client-id-here
+
+# Logging Configuration
+logging:
+  level:
+    com.example.authserver: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
