@@ -71,7 +71,9 @@ public class AuthController {
                             "isEmailVerified": true,
                             "authProvider": "GOOGLE",
                             "createdAt": "2023-01-01T00:00:00",
-                            "lastLogin": "2023-01-01T00:00:00"
+                            "lastLogin": "2023-01-01T00:00:00",
+                            "nameManuallyUpdated": false,
+                            "profilePictureManuallyUpdated": false
                         }
                     }
                     """
@@ -128,13 +130,19 @@ public class AuthController {
                 user = existingUser.get();
                 userService.updateLastLogin(user.getId());
                 
-                // Update user info if changed
+                // Update user info if changed, but preserve manual updates
                 boolean needsUpdate = false;
-                if (!user.getName().equals(googleUserInfo.getName())) {
+                
+                // Only update name from Google if it hasn't been manually updated
+                if (!user.getNameManuallyUpdated() && 
+                    !user.getName().equals(googleUserInfo.getName())) {
                     user.setName(googleUserInfo.getName());
                     needsUpdate = true;
                 }
-                if (!user.getProfilePictureUrl().equals(googleUserInfo.getPictureUrl())) {
+                
+                // Only update profile picture from Google if it hasn't been manually updated
+                if (!user.getProfilePictureManuallyUpdated() && 
+                    !user.getProfilePictureUrl().equals(googleUserInfo.getPictureUrl())) {
                     user.setProfilePictureUrl(googleUserInfo.getPictureUrl());
                     needsUpdate = true;
                 }

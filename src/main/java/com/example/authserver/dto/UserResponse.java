@@ -31,6 +31,12 @@ public class UserResponse {
     
     @Schema(description = "Last login timestamp", example = "2023-01-01T12:00:00")
     private LocalDateTime lastLogin;
+    
+    @Schema(description = "Whether the name was manually updated by user", example = "false")
+    private Boolean nameManuallyUpdated;
+    
+    @Schema(description = "Whether the profile picture was manually updated by user", example = "false")
+    private Boolean profilePictureManuallyUpdated;
 
     public UserResponse() {}
 
@@ -43,6 +49,8 @@ public class UserResponse {
         this.authProvider = user.getAuthProvider();
         this.createdAt = user.getCreatedAt();
         this.lastLogin = user.getLastLogin();
+        this.nameManuallyUpdated = user.getNameManuallyUpdated();
+        this.profilePictureManuallyUpdated = user.getProfilePictureManuallyUpdated();
     }
 
     public Long getId() {
@@ -107,5 +115,21 @@ public class UserResponse {
 
     public void setLastLogin(LocalDateTime lastLogin) {
         this.lastLogin = lastLogin;
+    }
+
+    public Boolean getNameManuallyUpdated() {
+        return nameManuallyUpdated;
+    }
+
+    public void setNameManuallyUpdated(Boolean nameManuallyUpdated) {
+        this.nameManuallyUpdated = nameManuallyUpdated;
+    }
+
+    public Boolean getProfilePictureManuallyUpdated() {
+        return profilePictureManuallyUpdated;
+    }
+
+    public void setProfilePictureManuallyUpdated(Boolean profilePictureManuallyUpdated) {
+        this.profilePictureManuallyUpdated = profilePictureManuallyUpdated;
     }
 }

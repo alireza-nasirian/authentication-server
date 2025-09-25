@@ -194,6 +194,47 @@ public class UserController {
         }
     }
 
+    @PostMapping("/me/sync-with-google")
+    @PreAuthorize("hasRole('USER')")
+    @Operation(
+        summary = "Sync profile with Google",
+        description = "Resets manual update flags to allow Google profile data to overwrite local changes on next authentication"
+    )
+    @SecurityRequirement(name = "Bearer Authentication")
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Sync flags reset successfully",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    value = """
+                    {
+                        "success": true,
+                        "message": "Profile will sync with Google on next login"
+                    }
+                    """
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401", 
+            description = "Unauthorized - Invalid or missing JWT token"
+        )
+    })
+    public ResponseEntity<?> syncWithGoogle(Authentication authentication) {
+        try {
+            UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+            userService.resetManualUpdateFlags(userPrincipal.getId());
+            
+            return ResponseEntity.ok(new MessageResponse(true, "Profile will sync with Google on next login"));
+        } catch (Exception ex) {
+            logger.error("Error resetting sync flags", ex);
+            return ResponseEntity.badRequest()
+                    .body(new MessageResponse(false, ex.getMessage()));
+        }
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<?> updateUser(
             @PathVariable Long id,

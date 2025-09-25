@@ -63,10 +63,12 @@ public class UserService {
 
         if (name != null && !name.trim().isEmpty()) {
             user.setName(name);
+            user.setNameManuallyUpdated(true); // Mark name as manually updated
         }
 
         if (profilePictureUrl != null) {
             user.setProfilePictureUrl(profilePictureUrl);
+            user.setProfilePictureManuallyUpdated(true); // Mark profile picture as manually updated
         }
 
         return userRepository.save(user);
@@ -85,6 +87,17 @@ public class UserService {
     }
 
     public User save(User user) {
+        return userRepository.save(user);
+    }
+
+    @Transactional
+    public User resetManualUpdateFlags(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        user.setNameManuallyUpdated(false);
+        user.setProfilePictureManuallyUpdated(false);
+        
         return userRepository.save(user);
     }
 }

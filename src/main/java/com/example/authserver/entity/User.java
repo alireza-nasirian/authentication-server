@@ -53,6 +53,13 @@ public class User implements UserDetails {
     @Column(name = "auth_provider")
     private AuthProvider authProvider;
     
+    // Tracking fields to preserve manual updates over Google profile changes
+    @Column(name = "name_manually_updated")
+    private Boolean nameManuallyUpdated = false;
+    
+    @Column(name = "profile_picture_manually_updated") 
+    private Boolean profilePictureManuallyUpdated = false;
+    
     // Constructors
     public User() {
         this.createdAt = LocalDateTime.now();
@@ -187,6 +194,22 @@ public class User implements UserDetails {
     
     public void setAuthProvider(AuthProvider authProvider) {
         this.authProvider = authProvider;
+    }
+    
+    public Boolean getNameManuallyUpdated() {
+        return nameManuallyUpdated;
+    }
+    
+    public void setNameManuallyUpdated(Boolean nameManuallyUpdated) {
+        this.nameManuallyUpdated = nameManuallyUpdated;
+    }
+    
+    public Boolean getProfilePictureManuallyUpdated() {
+        return profilePictureManuallyUpdated;
+    }
+    
+    public void setProfilePictureManuallyUpdated(Boolean profilePictureManuallyUpdated) {
+        this.profilePictureManuallyUpdated = profilePictureManuallyUpdated;
     }
     
     @PreUpdate
