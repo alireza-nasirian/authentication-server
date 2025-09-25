@@ -10,6 +10,8 @@ A comprehensive authentication server for Android mobile applications built with
 - **Spring Security**: Comprehensive security configuration
 - **Database Support**: H2 for development, MySQL for production
 - **RESTful API**: Clean and well-documented endpoints
+- **📚 Interactive API Documentation**: Comprehensive Swagger/OpenAPI 3.0 documentation
+- **🔒 Built-in Authentication Testing**: JWT token testing directly in Swagger UI
 
 ## Technology Stack
 
@@ -63,6 +65,11 @@ A comprehensive authentication server for Android mobile applications built with
    - Username: `sa`
    - Password: `password`
 
+5. **Access Swagger API Documentation**
+   - Swagger UI: http://localhost:8080/swagger-ui.html
+   - OpenAPI JSON: http://localhost:8080/v3/api-docs
+   - OpenAPI YAML: http://localhost:8080/v3/api-docs.yaml
+
 ### Production Setup
 
 1. **Configure MySQL Database**
@@ -85,6 +92,34 @@ A comprehensive authentication server for Android mobile applications built with
    ```bash
    mvn spring-boot:run -Dspring.profiles.active=prod
    ```
+
+## API Documentation
+
+### Interactive API Documentation (Swagger)
+
+This project includes comprehensive API documentation using OpenAPI 3.0 (Swagger). The interactive documentation provides:
+
+- **Complete API Reference**: All endpoints with detailed descriptions
+- **Request/Response Examples**: Sample JSON payloads for all operations
+- **Try It Out Feature**: Test API endpoints directly from the browser
+- **Authentication Support**: Built-in JWT token authentication
+- **Schema Documentation**: Detailed data models and validation rules
+
+**Access Swagger UI:**
+- **Development**: http://localhost:8080/swagger-ui.html
+- **API Docs JSON**: http://localhost:8080/v3/api-docs
+- **API Docs YAML**: http://localhost:8080/v3/api-docs.yaml
+
+**Note**: Swagger UI is automatically disabled in production for security.
+
+### Using Swagger UI
+
+1. **Navigate to Swagger UI** at http://localhost:8080/swagger-ui.html
+2. **Authenticate for Protected Endpoints**:
+   - First, use the `/api/auth/google` endpoint to get a JWT token
+   - Click the "Authorize" button (🔒) at the top of the page
+   - Enter `Bearer your-jwt-token-here`
+   - Now you can test protected endpoints like `/api/users/me`
 
 ## API Endpoints
 

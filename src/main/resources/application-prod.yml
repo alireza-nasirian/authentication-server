@@ -36,6 +36,13 @@ app:
     google:
       clientId: ${GOOGLE_CLIENT_ID:your-google-client-id}
 
+# Swagger/OpenAPI Configuration for Production (disabled)
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
 # Logging Configuration for Production
 logging:
   level:

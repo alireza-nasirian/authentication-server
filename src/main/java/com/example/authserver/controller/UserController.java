@@ -6,6 +6,15 @@ import com.example.authserver.entity.User;
 import com.example.authserver.security.UserPrincipal;
 import com.example.authserver.service.RefreshTokenService;
 import com.example.authserver.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +33,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/users")
 @CrossOrigin(origins = "*", maxAge = 3600)
+@Tag(name = "User Management", description = "CRUD operations for user accounts")
 public class UserController {
 
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
@@ -36,6 +46,29 @@ public class UserController {
 
     @GetMapping("/me")
     @PreAuthorize("hasRole('USER')")
+    @Operation(
+        summary = "Get current user information",
+        description = "Retrieves the profile information of the currently authenticated user"
+    )
+    @SecurityRequirement(name = "Bearer Authentication")
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200", 
+            description = "User information retrieved successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = UserResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401", 
+            description = "Unauthorized - Invalid or missing JWT token"
+        ),
+        @ApiResponse(
+            responseCode = "404", 
+            description = "User not found"
+        )
+    })
     public ResponseEntity<?> getCurrentUser(Authentication authentication) {
         try {
             UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
@@ -49,12 +82,32 @@ public class UserController {
         } catch (Exception ex) {
             logger.error("Error getting current user", ex);
             return ResponseEntity.badRequest()
-                    .body(new ApiResponse(false, "Error retrieving user information"));
+                    .body(new MessageResponse(false, "Error retrieving user information"));
         }
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getUserById(@PathVariable Long id) {
+    @Operation(
+        summary = "Get user by ID",
+        description = "Retrieves user information by user ID (public endpoint)"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200", 
+            description = "User found",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = UserResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "404", 
+            description = "User not found"
+        )
+    })
+    public ResponseEntity<?> getUserById(
+        @Parameter(description = "User ID", required = true, example = "1")
+        @PathVariable Long id) {
         try {
             Optional<User> user = userService.findById(id);
             
@@ -66,7 +119,7 @@ public class UserController {
         } catch (Exception ex) {
             logger.error("Error getting user by ID: " + id, ex);
             return ResponseEntity.badRequest()
-                    .body(new ApiResponse(false, "Error retrieving user"));
+                    .body(new MessageResponse(false, "Error retrieving user"));
         }
     }
 
@@ -91,12 +144,35 @@ public class UserController {
         } catch (Exception ex) {
             logger.error("Error getting all users", ex);
             return ResponseEntity.badRequest()
-                    .body(new ApiResponse(false, "Error retrieving users"));
+                    .body(new MessageResponse(false, "Error retrieving users"));
         }
     }
 
     @PutMapping("/me")
     @PreAuthorize("hasRole('USER')")
+    @Operation(
+        summary = "Update current user",
+        description = "Updates the profile information of the currently authenticated user"
+    )
+    @SecurityRequirement(name = "Bearer Authentication")
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200", 
+            description = "User updated successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = UserResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400", 
+            description = "Invalid request data"
+        ),
+        @ApiResponse(
+            responseCode = "401", 
+            description = "Unauthorized - Invalid or missing JWT token"
+        )
+    })
     public ResponseEntity<?> updateCurrentUser(
             @Valid @RequestBody UpdateUserRequest updateUserRequest,
             Authentication authentication) {
@@ -114,7 +190,7 @@ public class UserController {
         } catch (Exception ex) {
             logger.error("Error updating current user", ex);
             return ResponseEntity.badRequest()
-                    .body(new ApiResponse(false, ex.getMessage()));
+                    .body(new MessageResponse(false, ex.getMessage()));
         }
     }
 
@@ -134,7 +210,7 @@ public class UserController {
         } catch (Exception ex) {
             logger.error("Error updating user with ID: " + id, ex);
             return ResponseEntity.badRequest()
-                    .body(new ApiResponse(false, ex.getMessage()));
+                    .body(new MessageResponse(false, ex.getMessage()));
         }
     }
 
@@ -152,14 +228,14 @@ public class UserController {
                 // Delete user
                 userService.deleteUser(userPrincipal.getId());
                 
-                return ResponseEntity.ok(new ApiResponse(true, "User deleted successfully"));
+                return ResponseEntity.ok(new MessageResponse(true, "User deleted successfully"));
             } else {
                 return ResponseEntity.notFound().build();
             }
         } catch (Exception ex) {
             logger.error("Error deleting current user", ex);
             return ResponseEntity.badRequest()
-                    .body(new ApiResponse(false, "Error deleting user"));
+                    .body(new MessageResponse(false, "Error deleting user"));
         }
     }
 
@@ -175,23 +251,23 @@ public class UserController {
                 // Delete user
                 userService.deleteUser(id);
                 
-                return ResponseEntity.ok(new ApiResponse(true, "User deleted successfully"));
+                return ResponseEntity.ok(new MessageResponse(true, "User deleted successfully"));
             } else {
                 return ResponseEntity.notFound().build();
             }
         } catch (Exception ex) {
             logger.error("Error deleting user with ID: " + id, ex);
             return ResponseEntity.badRequest()
-                    .body(new ApiResponse(false, "Error deleting user"));
+                    .body(new MessageResponse(false, "Error deleting user"));
         }
     }
 
     // Helper class for API responses
-    public static class ApiResponse {
+    public static class MessageResponse {
         private Boolean success;
         private String message;
 
-        public ApiResponse(Boolean success, String message) {
+        public MessageResponse(Boolean success, String message) {
             this.success = success;
             this.message = message;
         }

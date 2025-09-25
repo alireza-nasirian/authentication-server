@@ -1,12 +1,16 @@
 package com.example.authserver.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 
+@Schema(description = "Request object for updating user information")
 public class UpdateUserRequest {
     
+    @Schema(description = "User's new name (optional)", example = "John Smith", maxLength = 100)
     @Size(max = 100)
     private String name;
     
+    @Schema(description = "New profile picture URL (optional)", example = "https://example.com/new-photo.jpg")
     private String profilePictureUrl;
 
     public UpdateUserRequest() {}

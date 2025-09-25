@@ -2,17 +2,34 @@ package com.example.authserver.dto;
 
 import com.example.authserver.entity.AuthProvider;
 import com.example.authserver.entity.User;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
 
+@Schema(description = "User information response")
 public class UserResponse {
+    @Schema(description = "User ID", example = "1")
     private Long id;
+    
+    @Schema(description = "User's full name", example = "John Doe")
     private String name;
+    
+    @Schema(description = "User's email address", example = "john@example.com")
     private String email;
+    
+    @Schema(description = "URL to user's profile picture", example = "https://lh3.googleusercontent.com/...")
     private String profilePictureUrl;
+    
+    @Schema(description = "Whether the user's email is verified", example = "true")
     private Boolean isEmailVerified;
+    
+    @Schema(description = "Authentication provider used", example = "GOOGLE")
     private AuthProvider authProvider;
+    
+    @Schema(description = "Account creation timestamp", example = "2023-01-01T00:00:00")
     private LocalDateTime createdAt;
+    
+    @Schema(description = "Last login timestamp", example = "2023-01-01T12:00:00")
     private LocalDateTime lastLogin;
 
     public UserResponse() {}

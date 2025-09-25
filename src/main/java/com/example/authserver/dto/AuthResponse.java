@@ -1,9 +1,21 @@
 package com.example.authserver.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema(description = "Authentication response containing JWT tokens and user information")
 public class AuthResponse {
+    @Schema(description = "JWT access token for API authentication", 
+            example = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIxIiwiZW1haWwiOiJqb2huQGV4YW1wbGUuY29tIi...")
     private String accessToken;
+    
+    @Schema(description = "Refresh token for obtaining new access tokens", 
+            example = "550e8400-e29b-41d4-a716-446655440000")
     private String refreshToken;
+    
+    @Schema(description = "Token type", example = "Bearer")
     private String tokenType = "Bearer";
+    
+    @Schema(description = "User information")
     private UserResponse user;
 
     public AuthResponse() {}

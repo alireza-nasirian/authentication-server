@@ -8,6 +8,13 @@ import com.example.authserver.security.JwtTokenProvider;
 import com.example.authserver.service.GoogleOAuthService;
 import com.example.authserver.service.RefreshTokenService;
 import com.example.authserver.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +28,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "*", maxAge = 3600)
+@Tag(name = "Authentication", description = "Authentication endpoints for Google OAuth and JWT token management")
 public class AuthController {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
@@ -38,6 +46,69 @@ public class AuthController {
     private RefreshTokenService refreshTokenService;
 
     @PostMapping("/google")
+    @Operation(
+        summary = "Authenticate with Google OAuth",
+        description = "Authenticates a user using Google ID token from Android app. Creates new user if doesn't exist, or logs in existing user."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Authentication successful",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = AuthResponse.class),
+                examples = @ExampleObject(
+                    value = """
+                    {
+                        "accessToken": "eyJhbGciOiJIUzUxMiJ9...",
+                        "refreshToken": "550e8400-e29b-41d4-a716-446655440000",
+                        "tokenType": "Bearer",
+                        "user": {
+                            "id": 1,
+                            "name": "John Doe",
+                            "email": "john@example.com",
+                            "profilePictureUrl": "https://lh3.googleusercontent.com/...",
+                            "isEmailVerified": true,
+                            "authProvider": "GOOGLE",
+                            "createdAt": "2023-01-01T00:00:00",
+                            "lastLogin": "2023-01-01T00:00:00"
+                        }
+                    }
+                    """
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400", 
+            description = "Invalid Google ID token or email already exists with different provider",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    value = """
+                    {
+                        "success": false,
+                        "message": "Invalid Google ID token"
+                    }
+                    """
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "500", 
+            description = "Internal server error",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    value = """
+                    {
+                        "success": false,
+                        "message": "Authentication failed"
+                    }
+                    """
+                )
+            )
+        )
+    })
     public ResponseEntity<?> authenticateWithGoogle(@Valid @RequestBody GoogleAuthRequest googleAuthRequest) {
         try {
             // Verify Google ID token
@@ -45,7 +116,7 @@ public class AuthController {
             
             if (googleUserInfo == null) {
                 return ResponseEntity.badRequest()
-                        .body(new ApiResponse(false, "Invalid Google ID token"));
+                        .body(new MessageResponse(false, "Invalid Google ID token"));
             }
 
             // Check if user exists
@@ -76,7 +147,7 @@ public class AuthController {
                 Optional<User> emailUser = userService.findByEmail(googleUserInfo.getEmail());
                 if (emailUser.isPresent()) {
                     return ResponseEntity.badRequest()
-                            .body(new ApiResponse(false, "Email is already registered with different authentication method"));
+                            .body(new MessageResponse(false, "Email is already registered with different authentication method"));
                 }
                 
                 // Create new user
@@ -98,11 +169,49 @@ public class AuthController {
         } catch (Exception ex) {
             logger.error("Error during Google authentication", ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse(false, "Authentication failed"));
+                    .body(new MessageResponse(false, "Authentication failed"));
         }
     }
 
     @PostMapping("/refresh")
+    @Operation(
+        summary = "Refresh access token",
+        description = "Generates a new access token using a valid refresh token"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Token refresh successful",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = TokenRefreshResponse.class),
+                examples = @ExampleObject(
+                    value = """
+                    {
+                        "accessToken": "eyJhbGciOiJIUzUxMiJ9...",
+                        "refreshToken": "550e8400-e29b-41d4-a716-446655440000",
+                        "tokenType": "Bearer"
+                    }
+                    """
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400", 
+            description = "Invalid or expired refresh token",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    value = """
+                    {
+                        "success": false,
+                        "message": "Refresh token was expired or revoked. Please make a new signin request"
+                    }
+                    """
+                )
+            )
+        )
+    })
     public ResponseEntity<?> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
         try {
             String requestRefreshToken = request.getRefreshToken();
@@ -119,28 +228,64 @@ public class AuthController {
         } catch (Exception ex) {
             logger.error("Error during token refresh", ex);
             return ResponseEntity.badRequest()
-                    .body(new ApiResponse(false, ex.getMessage()));
+                    .body(new MessageResponse(false, ex.getMessage()));
         }
     }
 
     @PostMapping("/logout")
+    @Operation(
+        summary = "Logout user",
+        description = "Revokes the refresh token to log out the user"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Logout successful",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    value = """
+                    {
+                        "success": true,
+                        "message": "Log out successful!"
+                    }
+                    """
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400", 
+            description = "Logout failed",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    value = """
+                    {
+                        "success": false,
+                        "message": "Logout failed"
+                    }
+                    """
+                )
+            )
+        )
+    })
     public ResponseEntity<?> logout(@Valid @RequestBody RefreshTokenRequest request) {
         try {
             refreshTokenService.revokeToken(request.getRefreshToken());
-            return ResponseEntity.ok(new ApiResponse(true, "Log out successful!"));
+            return ResponseEntity.ok(new MessageResponse(true, "Log out successful!"));
         } catch (Exception ex) {
             logger.error("Error during logout", ex);
             return ResponseEntity.badRequest()
-                    .body(new ApiResponse(false, "Logout failed"));
+                    .body(new MessageResponse(false, "Logout failed"));
         }
     }
 
     // Helper class for API responses
-    public static class ApiResponse {
+    public static class MessageResponse {
         private Boolean success;
         private String message;
 
-        public ApiResponse(Boolean success, String message) {
+        public MessageResponse(Boolean success, String message) {
             this.success = success;
             this.message = message;
         }

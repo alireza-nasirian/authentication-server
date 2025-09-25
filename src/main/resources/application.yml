@@ -45,6 +45,22 @@ app:
     google:
       clientId: your-google-client-id-here
 
+# Swagger/OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    tags-sorter: alpha
+    operations-sorter: alpha
+    display-request-duration: true
+    show-extensions: true
+    show-common-extensions: true
+    # Allow access to Swagger UI without authentication
+    disable-swagger-default-url: false
+  show-actuator: false
+
 # Logging Configuration
 logging:
   level:
