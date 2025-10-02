@@ -32,6 +32,7 @@ A comprehensive authentication server for Android mobile applications built with
 - Java 17 or higher
 - Maven 3.6 or higher
 - MySQL (for production)
+- Docker & Docker Compose (optional, for containerized deployment)
 
 ### Installation
 
@@ -337,13 +338,38 @@ mvn test
 mvn clean package -Pprod
 ```
 
-### Docker Support (Optional)
-```dockerfile
-FROM openjdk:17-jdk-slim
-COPY target/authentication-server-0.0.1-SNAPSHOT.jar app.jar
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "/app.jar"]
+### Docker Deployment
+
+This project includes comprehensive Docker support for easy deployment.
+
+#### Quick Start with Docker
+
+```bash
+# Development mode (H2 in-memory database)
+docker-compose up -d
+
+# Production mode (MySQL database)
+docker-compose -f docker-compose.prod.yml up -d
 ```
+
+
+
+**Linux/Mac:**
+```bash
+chmod +x docker-build.sh docker-run.sh
+./docker-build.sh   # Build the Docker image
+./docker-run.sh     # Run the application
+```
+
+📚 **For complete Docker documentation, see [README.Docker.md](README.Docker.md)**
+
+The Docker setup includes:
+- Multi-stage builds for optimized image size
+- Health checks and automatic restarts
+- Environment-based configuration
+- Development and production configurations
+- MySQL integration for production
+- Security best practices (non-root user, minimal attack surface)
 
 ## Contributing
 

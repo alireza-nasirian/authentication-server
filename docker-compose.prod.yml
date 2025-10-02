@@ -1,0 +1,81 @@
+version: '3.8'
+
+# Production configuration with MySQL
+services:
+  auth-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: authentication-server
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      
+      # MySQL Database Configuration
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-authdb}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-authuser}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-authpassword}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.MySQLDialect
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: false
+      
+      # JWT Configuration
+      APP_JWT_SECRET: ${JWT_SECRET}
+      APP_JWT_EXPIRATION_IN_MS: ${JWT_EXPIRATION:-86400000}
+      APP_REFRESH_TOKEN_EXPIRATION_IN_MS: ${REFRESH_TOKEN_EXPIRATION:-604800000}
+      
+      # OAuth2 Configuration
+      APP_OAUTH2_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      
+      # Logging
+      LOGGING_LEVEL_COM_EXAMPLE_AUTHSERVER: INFO
+      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY: WARN
+      LOGGING_LEVEL_ORG_HIBERNATE_SQL: WARN
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - auth-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 60s
+
+  mysql:
+    image: mysql:8.0
+    container_name: auth-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-authdb}
+      MYSQL_USER: ${MYSQL_USER:-authuser}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./init-db:/docker-entrypoint-initdb.d
+    networks:
+      - auth-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    command: --default-authentication-plugin=mysql_native_password
+
+networks:
+  auth-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+    driver: local
+
+
