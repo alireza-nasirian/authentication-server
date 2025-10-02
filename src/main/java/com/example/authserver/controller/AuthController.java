@@ -48,7 +48,7 @@ public class AuthController {
     @PostMapping("/google")
     @Operation(
         summary = "Authenticate with Google OAuth",
-        description = "Authenticates a user using Google ID token from Android app. Creates new user if doesn't exist, or logs in existing user."
+        description = "Authenticates a user using Google ID token from Android app. Creates new user if doesn't exist, or logs in existing user. Returns firstTimeLogin flag to indicate if this is the user's first authentication."
     )
     @ApiResponses(value = {
         @ApiResponse(
@@ -74,7 +74,8 @@ public class AuthController {
                             "lastLogin": "2023-01-01T00:00:00",
                             "nameManuallyUpdated": false,
                             "profilePictureManuallyUpdated": false
-                        }
+                        },
+                        "firstTimeLogin": true
                     }
                     """
                 )
@@ -124,6 +125,7 @@ public class AuthController {
             // Check if user exists
             Optional<User> existingUser = userService.findByGoogleId(googleUserInfo.getGoogleId());
             User user;
+            boolean isFirstTimeLogin = false;
 
             if (existingUser.isPresent()) {
                 // User exists, update last login
@@ -166,13 +168,14 @@ public class AuthController {
                         googleUserInfo.getPictureUrl(),
                         AuthProvider.GOOGLE
                 );
+                isFirstTimeLogin = true;
             }
 
             // Generate tokens
             String accessToken = jwtTokenProvider.generateAccessToken(user.getId(), user.getEmail());
             RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getId());
 
-            return ResponseEntity.ok(new AuthResponse(accessToken, refreshToken.getToken(), new UserResponse(user)));
+            return ResponseEntity.ok(new AuthResponse(accessToken, refreshToken.getToken(), new UserResponse(user), isFirstTimeLogin));
 
         } catch (Exception ex) {
             logger.error("Error during Google authentication", ex);

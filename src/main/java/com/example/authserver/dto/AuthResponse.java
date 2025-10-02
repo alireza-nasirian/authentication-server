@@ -17,6 +17,9 @@ public class AuthResponse {
     
     @Schema(description = "User information")
     private UserResponse user;
+    
+    @Schema(description = "Indicates if this is the user's first time logging in", example = "true")
+    private Boolean firstTimeLogin;
 
     public AuthResponse() {}
 
@@ -24,6 +27,13 @@ public class AuthResponse {
         this.accessToken = accessToken;
         this.refreshToken = refreshToken;
         this.user = user;
+    }
+
+    public AuthResponse(String accessToken, String refreshToken, UserResponse user, Boolean firstTimeLogin) {
+        this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
+        this.user = user;
+        this.firstTimeLogin = firstTimeLogin;
     }
 
     public String getAccessToken() {
@@ -56,5 +66,13 @@ public class AuthResponse {
 
     public void setUser(UserResponse user) {
         this.user = user;
+    }
+
+    public Boolean getFirstTimeLogin() {
+        return firstTimeLogin;
+    }
+
+    public void setFirstTimeLogin(Boolean firstTimeLogin) {
+        this.firstTimeLogin = firstTimeLogin;
     }
 }
