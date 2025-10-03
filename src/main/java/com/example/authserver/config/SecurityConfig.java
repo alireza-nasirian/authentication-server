@@ -2,42 +2,43 @@ package com.example.authserver.config;
 
 import com.example.authserver.security.JwtAuthenticationFilter;
 import com.example.authserver.service.CustomUserDetailsService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.web.servlet.DispatcherServletPath;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.servlet.util.matcher.MvcRequestMatcher;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true)
+@EnableMethodSecurity()
 public class SecurityConfig {
 
-    @Autowired
-    private CustomUserDetailsService customUserDetailsService;
+    private final CustomUserDetailsService customUserDetailsService;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    @Autowired
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
+    public SecurityConfig(CustomUserDetailsService customUserDetailsService,
+                          JwtAuthenticationFilter jwtAuthenticationFilter) {
+        this.customUserDetailsService = customUserDetailsService;
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -46,8 +47,8 @@ public class SecurityConfig {
 
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(customUserDetailsService);
+        // FIX: use no-arg ctor and set the services explicitly
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(customUserDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }
@@ -58,72 +59,61 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http,
-                                    HandlerMappingIntrospector introspector,
-                                    DispatcherServletPath dsPath) throws Exception {
-
-        // Build MVC matcher bound to the DispatcherServlet’s path (usually "/")
-        MvcRequestMatcher.Builder mvc = new MvcRequestMatcher.Builder(introspector)
-                .servletPath(dsPath.getPath()); // commonly "/"
+    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        // Use PathPattern-based request matchers
+        PathPatternRequestMatcher.Builder paths = PathPatternRequestMatcher.withDefaults();
 
         http
+                // JWT APIs are typically stateless; CORS enabled
                 .cors(c -> c.configurationSource(corsConfigurationSource()))
-                .csrf(AbstractHttpConfigurer::disable
-                        // If you keep CSRF, at least ignore H2 console:
-                        // .ignoringRequestMatchers(AntPathRequestMatcher.antMatcher("/h2-console/**"))
-                )
-                .headers(h -> h.frameOptions(f -> f.sameOrigin())) // H2 console needs this (or disable)
+                // For token-based APIs, disabling CSRF is common
+                .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(authz -> authz
-                        // MVC endpoints (use mvc.pattern for things like {id})
-                        .requestMatchers(mvc.pattern("/api/auth/**")).permitAll()
-                        .requestMatchers(mvc.pattern("/actuator/**")).permitAll()
-                        
-                        // Swagger/OpenAPI endpoints - Spring Boot 3.x + springdoc-openapi v2.x
-                        .requestMatchers(mvc.pattern("/swagger-ui/**")).permitAll()
-                        .requestMatchers(mvc.pattern("/swagger-ui.html")).permitAll()
-                        .requestMatchers(mvc.pattern("/v3/api-docs/**")).permitAll()
-                        .requestMatchers(mvc.pattern("/v3/api-docs.yaml")).permitAll()
-                        .requestMatchers(mvc.pattern("/swagger-resources/**")).permitAll()
-                        .requestMatchers(mvc.pattern("/webjars/**")).permitAll()
-                        
-                        // Additional Ant matchers for Swagger (fallback for static resources)
-                        .requestMatchers(AntPathRequestMatcher.antMatcher("/swagger-ui/**")).permitAll()
-                        .requestMatchers(AntPathRequestMatcher.antMatcher("/swagger-ui.html")).permitAll()
-                        .requestMatchers(AntPathRequestMatcher.antMatcher("/v3/api-docs/**")).permitAll()
-                        .requestMatchers(AntPathRequestMatcher.antMatcher("/swagger-resources/**")).permitAll()
-                        .requestMatchers(AntPathRequestMatcher.antMatcher("/webjars/**")).permitAll()
-                        
-                        .requestMatchers(mvc.pattern("/api/users/{id}")).permitAll()
-                        .requestMatchers(mvc.pattern("/api/users")).permitAll()
 
-                        // Non-MVC servlet (H2 console) → use Ant matcher
-                        .requestMatchers(AntPathRequestMatcher.antMatcher("/h2-console/**")).permitAll()
+                // H2 console needs frames from same origin
+                .headers(h -> h.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
 
-                        // Protected
-                        .requestMatchers(mvc.pattern("/api/users/me")).authenticated()
+                .authorizeHttpRequests(auth -> auth
+                        // --- Public endpoints ---
+                        .requestMatchers(
+                                paths.matcher("/api/auth/**"),
+                                paths.matcher("/swagger-ui/**"),
+                                paths.matcher("/swagger-ui.html"),
+                                paths.matcher("/v3/api-docs/**"),
+                                paths.matcher("/v3/api-docs.yaml"),
+                                paths.matcher("/swagger-resources/**"),
+                                paths.matcher("/webjars/**"),
+                                paths.matcher("/h2-console/**"),
+                                paths.matcher("/actuator/**"),
+                                paths.matcher("/favicon.ico")
+                        ).permitAll()
+
+                        // examples of fine-grained method+path (optional)
+                        .requestMatchers(paths.matcher(HttpMethod.GET, "/api/users")).permitAll()
+                        .requestMatchers(paths.matcher(HttpMethod.GET, "/api/users/{id}")).permitAll()
+
+                        // --- Protected endpoints ---
+                        .requestMatchers(paths.matcher("/api/users/me")).authenticated()
                         .anyRequest().authenticated()
                 );
 
-        // Add JWT token filter
+        // JWT filter before UsernamePasswordAuthenticationFilter
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
-        // For H2 Console (development only)
-        http.headers(headers -> headers.frameOptions(Customizer.withDefaults()).disable());
 
         return http.build();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setAllowCredentials(true);
+        CorsConfiguration cfg = new CorsConfiguration();
+        // NOTE: If you set allowCredentials(true), avoid "*" at runtime. Prefer explicit origins.
+        cfg.setAllowedOriginPatterns(List.of("*"));
+        cfg.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        cfg.setAllowedHeaders(List.of("*"));
+        cfg.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
+        source.registerCorsConfiguration("/**", cfg);
         return source;
     }
 }

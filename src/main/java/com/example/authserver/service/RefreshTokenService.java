@@ -5,7 +5,6 @@ import com.example.authserver.entity.User;
 import com.example.authserver.repository.RefreshTokenRepository;
 import com.example.authserver.repository.UserRepository;
 import com.example.authserver.security.JwtTokenProvider;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,14 +19,17 @@ public class RefreshTokenService {
     @Value("${app.refreshTokenExpirationInMs:604800000}") // 7 days
     private long refreshTokenDurationMs;
 
-    @Autowired
-    private RefreshTokenRepository refreshTokenRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final UserRepository userRepository;
+    private final JwtTokenProvider jwtTokenProvider;
 
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
+    public RefreshTokenService(RefreshTokenRepository refreshTokenRepository,
+                              UserRepository userRepository,
+                              JwtTokenProvider jwtTokenProvider) {
+        this.refreshTokenRepository = refreshTokenRepository;
+        this.userRepository = userRepository;
+        this.jwtTokenProvider = jwtTokenProvider;
+    }
 
     public Optional<RefreshToken> findByToken(String token) {
         return refreshTokenRepository.findByToken(token);

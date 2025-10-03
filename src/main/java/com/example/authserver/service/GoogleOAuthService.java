@@ -41,7 +41,7 @@ public class GoogleOAuthService {
 
                 String userId = payload.getSubject();
                 String email = payload.getEmail();
-                boolean emailVerified = Boolean.valueOf(payload.getEmailVerified());
+                boolean emailVerified = payload.getEmailVerified();
                 String name = (String) payload.get("name");
                 String pictureUrl = (String) payload.get("picture");
                 String familyName = (String) payload.get("family_name");
@@ -63,47 +63,7 @@ public class GoogleOAuthService {
         }
     }
 
-    public static class GoogleUserInfo {
-        private final String googleId;
-        private final String email;
-        private final String name;
-        private final String pictureUrl;
-        private final String givenName;
-        private final String familyName;
-
-        public GoogleUserInfo(String googleId, String email, String name, String pictureUrl, 
-                             String givenName, String familyName) {
-            this.googleId = googleId;
-            this.email = email;
-            this.name = name;
-            this.pictureUrl = pictureUrl;
-            this.givenName = givenName;
-            this.familyName = familyName;
-        }
-
-        // Getters
-        public String getGoogleId() {
-            return googleId;
-        }
-
-        public String getEmail() {
-            return email;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public String getPictureUrl() {
-            return pictureUrl;
-        }
-
-        public String getGivenName() {
-            return givenName;
-        }
-
-        public String getFamilyName() {
-            return familyName;
-        }
+    public record GoogleUserInfo(String googleId, String email, String name, String pictureUrl, String givenName,
+                                 String familyName) {
     }
 }

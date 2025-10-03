@@ -8,7 +8,7 @@ public class GoogleAuthRequest {
     
     @Schema(description = "Google ID token received from Android app", 
             example = "eyJhbGciOiJSUzI1NiIsImtpZCI6IjdkYzBkMjE5NjNhNmE1ODNkMjhiMGZlN...",
-            required = true)
+            requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank
     private String idToken;
 

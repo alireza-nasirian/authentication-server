@@ -123,17 +123,12 @@ docker-compose.override.yml
 
 # JetBrains IDEs
 .idea/
-*.iml
-*.ipr
-*.iws
 
 # Eclipse
 .metadata
 bin/
 tmp/
-*.tmp
 *.bak
-*.swp
 *~.nib
 local.properties
 .settings/

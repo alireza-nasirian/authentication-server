@@ -7,12 +7,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.stereotype.Component;
@@ -24,25 +23,31 @@ import java.io.IOException;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    @Autowired
-    private JwtTokenProvider tokenProvider;
+    private final JwtTokenProvider tokenProvider;
+    private final CustomUserDetailsService customUserDetailsService;
 
-    @Autowired
-    private CustomUserDetailsService customUserDetailsService;
+    private static final PathPatternRequestMatcher.Builder mvc = PathPatternRequestMatcher.withDefaults();
 
     private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
+    public JwtAuthenticationFilter(JwtTokenProvider tokenProvider,
+                                  CustomUserDetailsService customUserDetailsService) {
+        this.tokenProvider = tokenProvider;
+        this.customUserDetailsService = customUserDetailsService;
+    }
+
     private final RequestMatcher publicEndpoints = new OrRequestMatcher(
-            new AntPathRequestMatcher("/api/auth/**"),
-            new AntPathRequestMatcher("/swagger-ui/**"),
-            new AntPathRequestMatcher("/swagger-ui.html"),
-            new AntPathRequestMatcher("/v3/api-docs/**"),
-            new AntPathRequestMatcher("/v3/api-docs.yaml"),
-            new AntPathRequestMatcher("/swagger-resources/**"),
-            new AntPathRequestMatcher("/webjars/**"),
-            new AntPathRequestMatcher("/h2-console/**"),
-            new AntPathRequestMatcher("/actuator/**"),
-            new AntPathRequestMatcher("/favicon.ico")
+
+            mvc.matcher("/api/auth/**"),
+            mvc.matcher("/swagger-ui/**"),
+            mvc.matcher("/swagger-ui.html"),
+            mvc.matcher("/v3/api-docs/**"),
+            mvc.matcher("/v3/api-docs.yaml"),
+            mvc.matcher("/swagger-resources/**"),
+            mvc.matcher("/webjars/**"),
+            mvc.matcher("/h2-console/**"),
+            mvc.matcher("/actuator/**"),
+            mvc.matcher("/favicon.ico")
     );
 
     @Override

@@ -8,7 +8,7 @@ public class RefreshTokenRequest {
     
     @Schema(description = "Refresh token obtained from login response", 
             example = "550e8400-e29b-41d4-a716-446655440000",
-            required = true)
+            requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank
     private String refreshToken;
 

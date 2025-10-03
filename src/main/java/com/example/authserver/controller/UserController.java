@@ -18,7 +18,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -38,11 +37,13 @@ public class UserController {
 
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
+    private final RefreshTokenService refreshTokenService;
 
-    @Autowired
-    private RefreshTokenService refreshTokenService;
+    public UserController(UserService userService, RefreshTokenService refreshTokenService) {
+        this.userService = userService;
+        this.refreshTokenService = refreshTokenService;
+    }
 
     @GetMapping("/me")
     @PreAuthorize("hasRole('USER')")
@@ -117,7 +118,7 @@ public class UserController {
                 return ResponseEntity.notFound().build();
             }
         } catch (Exception ex) {
-            logger.error("Error getting user by ID: " + id, ex);
+            logger.error("Error getting user by ID: {}", id, ex);
             return ResponseEntity.badRequest()
                     .body(new MessageResponse(false, "Error retrieving user"));
         }
@@ -249,7 +250,7 @@ public class UserController {
             
             return ResponseEntity.ok(new UserResponse(updatedUser));
         } catch (Exception ex) {
-            logger.error("Error updating user with ID: " + id, ex);
+            logger.error("Error updating user with ID: {}", id, ex);
             return ResponseEntity.badRequest()
                     .body(new MessageResponse(false, ex.getMessage()));
         }
@@ -297,7 +298,7 @@ public class UserController {
                 return ResponseEntity.notFound().build();
             }
         } catch (Exception ex) {
-            logger.error("Error deleting user with ID: " + id, ex);
+            logger.error("Error deleting user with ID: {}", id, ex);
             return ResponseEntity.badRequest()
                     .body(new MessageResponse(false, "Error deleting user"));
         }

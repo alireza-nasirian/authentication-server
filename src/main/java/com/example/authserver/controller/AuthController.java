@@ -18,7 +18,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -33,17 +32,20 @@ public class AuthController {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
-    @Autowired
-    private GoogleOAuthService googleOAuthService;
+    private final GoogleOAuthService googleOAuthService;
+    private final UserService userService;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final RefreshTokenService refreshTokenService;
 
-    @Autowired
-    private UserService userService;
-
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
-
-    @Autowired
-    private RefreshTokenService refreshTokenService;
+    public AuthController(GoogleOAuthService googleOAuthService,
+                         UserService userService,
+                         JwtTokenProvider jwtTokenProvider,
+                         RefreshTokenService refreshTokenService) {
+        this.googleOAuthService = googleOAuthService;
+        this.userService = userService;
+        this.jwtTokenProvider = jwtTokenProvider;
+        this.refreshTokenService = refreshTokenService;
+    }
 
     @PostMapping("/google")
     @Operation(
@@ -123,7 +125,7 @@ public class AuthController {
             }
 
             // Check if user exists
-            Optional<User> existingUser = userService.findByGoogleId(googleUserInfo.getGoogleId());
+            Optional<User> existingUser = userService.findByGoogleId(googleUserInfo.googleId());
             User user;
             boolean isFirstTimeLogin = false;
 
@@ -137,15 +139,15 @@ public class AuthController {
                 
                 // Only update name from Google if it hasn't been manually updated
                 if (!user.getNameManuallyUpdated() && 
-                    !user.getName().equals(googleUserInfo.getName())) {
-                    user.setName(googleUserInfo.getName());
+                    !user.getName().equals(googleUserInfo.name())) {
+                    user.setName(googleUserInfo.name());
                     needsUpdate = true;
                 }
                 
                 // Only update profile picture from Google if it hasn't been manually updated
                 if (!user.getProfilePictureManuallyUpdated() && 
-                    !user.getProfilePictureUrl().equals(googleUserInfo.getPictureUrl())) {
-                    user.setProfilePictureUrl(googleUserInfo.getPictureUrl());
+                    !user.getProfilePictureUrl().equals(googleUserInfo.pictureUrl())) {
+                    user.setProfilePictureUrl(googleUserInfo.pictureUrl());
                     needsUpdate = true;
                 }
                 
@@ -154,7 +156,7 @@ public class AuthController {
                 }
             } else {
                 // Check if email already exists with different auth provider
-                Optional<User> emailUser = userService.findByEmail(googleUserInfo.getEmail());
+                Optional<User> emailUser = userService.findByEmail(googleUserInfo.email());
                 if (emailUser.isPresent()) {
                     return ResponseEntity.badRequest()
                             .body(new MessageResponse(false, "Email is already registered with different authentication method"));
@@ -162,10 +164,10 @@ public class AuthController {
                 
                 // Create new user
                 user = userService.createUser(
-                        googleUserInfo.getName(),
-                        googleUserInfo.getEmail(),
-                        googleUserInfo.getGoogleId(),
-                        googleUserInfo.getPictureUrl(),
+                        googleUserInfo.name(),
+                        googleUserInfo.email(),
+                        googleUserInfo.googleId(),
+                        googleUserInfo.pictureUrl(),
                         AuthProvider.GOOGLE
                 );
                 isFirstTimeLogin = true;
