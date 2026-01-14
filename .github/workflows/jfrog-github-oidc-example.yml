@@ -1,28 +1,121 @@
-name: "Setup JFrog CLI OIDC Example"
-on: push
+name: Build, Publish to JFrog, and Attest (Maven + Docker)
 
-permissions:
-  # This is required for requesting the OIDC token
-  id-token: write
-  # This is required for actions/checkout
-  contents: read
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+env:
+  # GitHub Variables (or Environment variables if you set job.environment)
+  JF_URL: ${{ vars.JF_URL }}
+  JF_REGISTRY: ${{ vars.JF_REGISTRY }}
+  OIDC_PROVIDER_NAME: ${{ vars.OIDC_PROVIDER_NAME }}
+
+  # Where to put the built jar in Artifactory (simple demo path)
+  # This is a repo key. Use a LOCAL generic repo like: generic-local
+  JF_MAVEN_DEPLOY_REPO: ${{ vars.JF_MAVEN_DEPLOY_REPO }}
+
+  # Docker image name should include the Artifactory docker repo key.
+  # Example: docker-local/authentication-server
+  DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
+
+  BUILD_NAME: authentication-server
+
 jobs:
-  build:
+  build-publish-attest:
     runs-on: ubuntu-latest
     environment: JFrog
-    env:
-          JF_URL: ${{ vars.JF_URL }}
+
+    permissions:
+      contents: read
+      attestations: write   # required by actions/attest-build-provenance
+      id-token: write       # required for OIDC (JFrog auth + attestations)
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup JFrog CLI
-        uses: jfrog/setup-jfrog-cli@v4
+        uses: actions/checkout@v5
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
         with:
-          oidc-provider-name: alireza-nasirian/authentication-server@github
-      - name: Upload something to Artifactory (test)
-        run: | 
-          jf rt u "README.md" "authenticationserver/myproject/${{ github.run_number }}/"
-      - name: Run JFrog CLI
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      # Install + configure JFrog CLI using OIDC (no long-lived secrets)
+      - name: Setup JFrog CLI (OIDC)
+        id: setup-jfrog-cli
+        uses: jfrog/setup-jfrog-cli@v4
+        env:
+          JF_URL: ${{ env.JF_URL }}
+        with:
+          oidc-provider-name: ${{ env.OIDC_PROVIDER_NAME }}
+
+      - name: Maven build & test
+        run: mvn -B -ntp test package
+
+      # Pick the main jar for attestation (exclude *-sources.jar, *-javadoc.jar if present)
+      - name: Find built JAR
+        id: jar
+        shell: bash
         run: |
-          # Ping the server
+          JAR_PATH="$(ls -1 target/*.jar | grep -vE '(-sources|-javadoc)\.jar$' | head -n 1)"
+          if [ -z "$JAR_PATH" ]; then
+            echo "No jar found under target/"
+            ls -la target || true
+            exit 1
+          fi
+          echo "jar_path=$JAR_PATH" >> "$GITHUB_OUTPUT"
+          echo "Found JAR: $JAR_PATH"
+
+      # Upload the jar to Artifactory and attach build-info metadata for traceability
+      - name: Upload JAR to Artifactory (with build-info)
+        env:
+          JFROG_CLI_BUILD_NAME: ${{ env.BUILD_NAME }}
+          JFROG_CLI_BUILD_NUMBER: ${{ github.run_number }}
+        run: |
           jf rt ping
+          jf rt u "${{ steps.jar.outputs.jar_path }}" \
+            "${JF_MAVEN_DEPLOY_REPO}/${BUILD_NAME}/${{ github.run_number }}/"
+
+      - name: Publish build-info to Artifactory
+        env:
+          JFROG_CLI_BUILD_NAME: ${{ env.BUILD_NAME }}
+          JFROG_CLI_BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          jf rt bp "${JFROG_CLI_BUILD_NAME}" "${JFROG_CLI_BUILD_NUMBER}"
+
+      # Provenance attestation for the JAR (GitHub Artifact Attestations)
+      - name: Attest JAR (provenance)
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: ${{ steps.jar.outputs.jar_path }}
+
+      # ---- Docker part (matches the GitHub blog demo pattern) ----
+      # Note: JF_REGISTRY must be a valid docker registry host, e.g. trialxxxx.jfrog.io
+      # If you set JF_REGISTRY as "https://trialxxxx.jfrog.io", docker/login-action accepts it,
+      # but if you hit issues, set it as "trialxxxx.jfrog.io" (no scheme).
+      - name: Docker login to JFrog registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.JF_REGISTRY }}
+          username: ${{ steps.setup-jfrog-cli.outputs.oidc-user }}
+          password: ${{ steps.setup-jfrog-cli.outputs.oidc-token }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & push Docker image
+        id: build-and-push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.JF_REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.run_number }}
+
+      - name: Attest Docker image (provenance)
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: oci://${{ env.JF_REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}
+          subject-digest: ${{ steps.build-and-push.outputs.digest }}
