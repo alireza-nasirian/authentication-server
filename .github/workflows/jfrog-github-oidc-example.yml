@@ -9,6 +9,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: JFrog
     env:
           JF_URL: ${{ vars.JF_URL }}
     steps:
