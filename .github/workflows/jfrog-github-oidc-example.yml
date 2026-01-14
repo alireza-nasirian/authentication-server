@@ -10,6 +10,7 @@ env:
   JF_URL: ${{ vars.JF_URL }}
   JF_REGISTRY: ${{ vars.JF_REGISTRY }}
   OIDC_PROVIDER_NAME: ${{ vars.OIDC_PROVIDER_NAME }}
+  OIDC_AUDIENCE: ${{ vars.OIDC_AUDIENCE }}
 
   # Where to put the built jar in Artifactory (simple demo path)
   # This is a repo key. Use a LOCAL generic repo like: generic-local
@@ -50,6 +51,7 @@ jobs:
           JF_URL: ${{ env.JF_URL }}
         with:
           oidc-provider-name: ${{ env.OIDC_PROVIDER_NAME }}
+          oidc-audience: ${{ env.OIDC_AUDIENCE }}
 
       - name: Maven build & test
         run: mvn -B -ntp test package
