@@ -21,7 +21,7 @@ jobs:
           oidc-provider-name: alireza-nasirian/authentication-server@github
       - name: Upload something to Artifactory (test)
         run: | 
-          jf rt u "README.md" "generic-local/myproject/${{ github.run_number }}/"
+          jf rt u "README.md" "authenticationserver/myproject/${{ github.run_number }}/"
       - name: Run JFrog CLI
         run: |
           # Ping the server
