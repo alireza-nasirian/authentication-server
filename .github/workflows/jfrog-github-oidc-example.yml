@@ -43,6 +43,11 @@ jobs:
           java-version: "21"
           cache: maven
 
+      - name: Debug OIDC vars
+        run: |
+          echo "OIDC_PROVIDER_NAME=${OIDC_PROVIDER_NAME}"
+          echo "OIDC_AUDIENCE=${OIDC_AUDIENCE}"
+
       # Install + configure JFrog CLI using OIDC (no long-lived secrets)
       - name: Setup JFrog CLI (OIDC)
         id: setup-jfrog-cli
