@@ -51,7 +51,6 @@ jobs:
         with:
           oidc-provider-name: ${{ env.OIDC_PROVIDER_NAME }}
           oidc-audience: ${{ env.OIDC_AUDIENCE }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Maven build & test
         run: mvn -B -ntp test package
