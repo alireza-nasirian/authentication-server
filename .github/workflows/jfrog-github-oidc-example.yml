@@ -47,17 +47,10 @@ jobs:
         id: setup-jfrog-cli
         uses: jfrog/setup-jfrog-cli@v4
         env:
-          JF_URL: https://trialk3iolo.jfrog.io 
+          JF_URL: ${{ env.JF_URL }}
         with:
-          oidc-provider-name: github 
-          oidc-audience: test
-
-        # uses: jfrog/setup-jfrog-cli@v4
-        # env:
-        #   JF_URL: ${{ env.JF_URL }}
-        # with:
-        #   oidc-provider-name: ${{ env.OIDC_PROVIDER_NAME }}
-        #   oidc-audience: ${{ env.OIDC_AUDIENCE }}
+          oidc-provider-name: ${{ env.OIDC_PROVIDER_NAME }}
+          oidc-audience: ${{ env.OIDC_AUDIENCE }}
           
       - name: Maven build & test
         run: mvn -B -ntp test package
