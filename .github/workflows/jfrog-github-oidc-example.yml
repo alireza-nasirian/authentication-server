@@ -92,6 +92,18 @@ jobs:
         with:
           subject-path: ${{ steps.jar.outputs.jar_path }}
 
+      - name: Create Evidence for JAR (signed metadata)
+        env:
+          JFROG_CLI_BUILD_NAME: ${{ env.BUILD_NAME }}
+          JFROG_CLI_BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          jf evd create \
+            --subject-repo "${JF_MAVEN_DEPLOY_REPO}" \
+            --subject-path "${BUILD_NAME}/${{ github.run_number }}/$(basename ${{ steps.jar.outputs.jar_path }})" \
+            --predicate-type "https://jfrog.com/evidence/build-metadata/v1" \
+            --predicate ./target/evidence-build.json
+
+
       # ---- Docker part (matches the GitHub blog demo pattern) ----
       # Note: JF_REGISTRY must be a valid docker registry host, e.g. trialxxxx.jfrog.io
       # If you set JF_REGISTRY as "https://trialxxxx.jfrog.io", docker/login-action accepts it,
@@ -114,6 +126,15 @@ jobs:
           push: true
           tags: |
             ${{ env.JF_REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.run_number }}
+
+      - name: Create Evidence for Docker image
+        run: |
+          jf evd create \
+            --subject-repo "$(echo "${DOCKER_IMAGE_NAME}" | cut -d/ -f1)" \
+            --subject-path "$(echo "${DOCKER_IMAGE_NAME}" | cut -d/ -f2):${{ github.run_number }}" \
+            --predicate-type "https://jfrog.com/evidence/container-build/v1" \
+            --predicate ./docker-evidence.json
+
 
       - name: Attest Docker image (provenance)
         uses: actions/attest-build-provenance@v2
