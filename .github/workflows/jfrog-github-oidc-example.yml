@@ -114,19 +114,19 @@ jobs:
           JSON
           ls -la target
 
-      - name: Create Evidence for JAR (signed metadata)
-        env:
-          JFROG_CLI_BUILD_NAME: ${{ env.BUILD_NAME }}
-          JFROG_CLI_BUILD_NUMBER: ${{ github.run_number }}
-        run: |
-          SUBJECT_REPO_PATH="${JF_MAVEN_DEPLOY_REPO}/${BUILD_NAME}/${{ github.run_number }}/target/$(basename "${{ steps.jar.outputs.jar_path }}")"
+      # - name: Create Evidence for JAR (signed metadata)
+      #   env:
+      #     JFROG_CLI_BUILD_NAME: ${{ env.BUILD_NAME }}
+      #     JFROG_CLI_BUILD_NUMBER: ${{ github.run_number }}
+      #   run: |
+      #     SUBJECT_REPO_PATH="${JF_MAVEN_DEPLOY_REPO}/${BUILD_NAME}/${{ github.run_number }}/target/$(basename "${{ steps.jar.outputs.jar_path }}")"
 
-          jf evd create \
-            --subject-repo-path "$SUBJECT_REPO_PATH" \
-            --subject-sha256 "${{ steps.jarsha.outputs.sha256 }}" \
-            --predicate ./target/evidence-build.json \
-            --predicate-type "https://jfrog.com/evidence/approval/v1" \
-            --provider-id "github-actions"
+      #     jf evd create \
+      #       --subject-repo-path "$SUBJECT_REPO_PATH" \
+      #       --subject-sha256 "${{ steps.jarsha.outputs.sha256 }}" \
+      #       --predicate ./target/evidence-build.json \
+      #       --predicate-type "https://jfrog.com/evidence/approval/v1" \
+      #       --provider-id "github-actions"
 
       # ---- Docker part (matches the GitHub blog demo pattern) ----
       # Note: JF_REGISTRY must be a valid docker registry host, e.g. trialxxxx.jfrog.io
