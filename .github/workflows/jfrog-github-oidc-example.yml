@@ -151,13 +151,32 @@ jobs:
           tags: |
             ${{ env.JF_REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.run_number }}
 
-      - name: Create Evidence for Docker image
+      - name: Evidence on docker  
         run: |
-          jf evd create \
-            --subject-repo "$(echo "${DOCKER_IMAGE_NAME}" | cut -d/ -f1)" \
-            --subject-path "$(echo "${DOCKER_IMAGE_NAME}" | cut -d/ -f2):${{ github.run_number }}" \
-            --predicate-type "https://jfrog.com/evidence/container-build/v1" \
-            --predicate ./docker-evidence.json
+          echo '{ "actor": "${{ github.actor }}", "date": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'" }' > sign.json
+          jf evd create --package-name example-project-app --package-version 32 --package-repo-name example-project-docker-dev \
+            --key "${{ secrets.PRIVATE_KEY }}" \
+            --predicate ./sign.json --predicate-type https://jfrog.com/evidence/signature/v1
+          echo ' Evidence attached: `signature` '
+
+      - name: Upload readme file  
+        run: |
+          jf rt upload ./README.md example-project-generic-dev/readme/${{ github.run_number }}/ --build-name ${{ vars.BUILD_NAME }} --build-number ${{ github.run_number }}
+          jf evd create --subject-repo-path example-project-generic-dev/readme/${{ github.run_number }}/README.md \
+            --key "${{ secrets.PRIVATE_KEY }}" \
+            --predicate ./sign.json --predicate-type https://jfrog.com/evidence/signature/v1
+
+
+      - name: Publish build info  
+        run: jfrog rt build-publish ${{ vars.BUILD_NAME }} ${{ github.run_number }}
+
+      - name: Sign build evidence  
+        run: |
+          echo '{ "actor": "${{ github.actor }}", "date": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'" }' > sign.json
+          jf evd create --build-name ${{ vars.BUILD_NAME }} --build-number ${{ github.run_number }} \
+            --predicate ./sign.json --predicate-type https://jfrog.com/evidence/build-signature/v1 \
+            --key "${{ secrets.PRIVATE_KEY }}"
+          echo ' Evidence attached: `build-signature` ' >> $GITHUB_STEP_SUMMARY
 
 
       - name: Attest Docker image (provenance)
