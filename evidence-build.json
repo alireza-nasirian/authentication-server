@@ -1,0 +1,8 @@
+{
+  "buildName": "authentication-server",
+  "buildNumber": "GITHUB_RUN_NUMBER",
+  "commit": "${GITHUB_SHA}",
+  "runner": "github-actions",
+  "source": "maven",
+  "ci": "GitHub Actions"
+}
