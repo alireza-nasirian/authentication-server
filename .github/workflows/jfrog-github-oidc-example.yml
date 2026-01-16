@@ -6,17 +6,11 @@ on:
   workflow_dispatch:
 
 env:
-  # GitHub Variables (or Environment variables if you set job.environment)
   JF_URL: ${{ vars.JF_URL }}
   JF_REGISTRY: ${{ vars.JF_REGISTRY }}
   OIDC_PROVIDER_NAME: ${{ vars.OIDC_PROVIDER_NAME }}
   OIDC_AUDIENCE: ${{ vars.OIDC_AUDIENCE }}
-  # Where to put the built jar in Artifactory (simple demo path)
-  # This is a repo key. Use a LOCAL generic repo like: generic-local
   JF_MAVEN_DEPLOY_REPO: ${{ vars.JF_MAVEN_DEPLOY_REPO }}
-
-  # Docker image name should include the Artifactory docker repo key.
-  # Example: docker-local/authentication-server
   DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
 
   BUILD_NAME: authentication-server
@@ -28,8 +22,8 @@ jobs:
 
     permissions:
       contents: read
-      attestations: write   # required by actions/attest-build-provenance
-      id-token: write       # required for OIDC (JFrog auth + attestations)
+      attestations: write   
+      id-token: write      
 
     steps:
       - name: Checkout
@@ -42,7 +36,6 @@ jobs:
           java-version: "21"
           cache: maven
 
-      # Install + configure JFrog CLI using OIDC (no long-lived secrets)
       - name: Setup JFrog CLI (OIDC)
         id: setup-jfrog-cli
         uses: jfrog/setup-jfrog-cli@v4
@@ -55,7 +48,6 @@ jobs:
       - name: Maven build & test
         run: mvn -B -ntp test package
 
-      # Pick the main jar for attestation (exclude *-sources.jar, *-javadoc.jar if present)
       - name: Find built JAR
         id: jar
         shell: bash
@@ -69,7 +61,6 @@ jobs:
           echo "jar_path=$JAR_PATH" >> "$GITHUB_OUTPUT"
           echo "Found JAR: $JAR_PATH"
 
-      # Upload the jar to Artifactory and attach build-info metadata for traceability
       - name: Upload JAR to Artifactory (with build-info)
         env:
           JFROG_CLI_BUILD_NAME: ${{ env.BUILD_NAME }}
@@ -86,7 +77,6 @@ jobs:
         run: |
           jf rt bp "${JFROG_CLI_BUILD_NAME}" "${JFROG_CLI_BUILD_NUMBER}"
 
-      # Provenance attestation for the JAR (GitHub Artifact Attestations)
       - name: Attest JAR (provenance)
         uses: actions/attest-build-provenance@v2
         with:
@@ -151,47 +141,47 @@ jobs:
           tags: |
             ${{ env.JF_REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.run_number }}
 
-      - name: Evidence on docker
-        shell: bash
-        run: |
-          set -euo pipefail
+      # - name: Evidence on docker
+      #   shell: bash
+      #   run: |
+      #     set -euo pipefail
 
-          # Optional: small predicate payload
-          cat > sign.json <<'JSON'
-          {
-            "actor": "${{ github.actor }}",
-            "run_id": "${{ github.run_id }}",
-            "sha": "${{ github.sha }}"
-          }
-          JSON
+      #     # Optional: small predicate payload
+      #     cat > sign.json <<'JSON'
+      #     {
+      #       "actor": "${{ github.actor }}",
+      #       "run_id": "${{ github.run_id }}",
+      #       "sha": "${{ github.sha }}"
+      #     }
+      #     JSON
 
-          jf evd create \
-          --package-repo-name "docker-trial" \
-          --package-name "authenticationserver" \
-          --package-version "${{ github.run_number }}" \
-          --key "${{ secrets.PRIVATE_KEY }}" \
-          --predicate ./sign.json \
-          --predicate-type "https://jfrog.com/evidence/signature/v1"
-
-
-      - name: Upload readme file  
-        run: |
-          jf rt upload ./README.md example-project-generic-dev/readme/${{ github.run_number }}/ --build-name ${{ vars.BUILD_NAME }} --build-number ${{ github.run_number }}
-          jf evd create --subject-repo-path example-project-generic-dev/readme/${{ github.run_number }}/README.md \
-            --key "${{ secrets.PRIVATE_KEY }}" \
-            --predicate ./sign.json --predicate-type https://jfrog.com/evidence/signature/v1
+      #     jf evd create \
+      #     --package-repo-name "docker-trial" \
+      #     --package-name "authenticationserver" \
+      #     --package-version "${{ github.run_number }}" \
+      #     --key "${{ secrets.PRIVATE_KEY }}" \
+      #     --predicate ./sign.json \
+      #     --predicate-type "https://jfrog.com/evidence/signature/v1"
 
 
-      - name: Publish build info  
-        run: jfrog rt build-publish ${{ vars.BUILD_NAME }} ${{ github.run_number }}
+      # - name: Upload readme file  
+      #   run: |
+      #     jf rt upload ./README.md example-project-generic-dev/readme/${{ github.run_number }}/ --build-name ${{ vars.BUILD_NAME }} --build-number ${{ github.run_number }}
+      #     jf evd create --subject-repo-path example-project-generic-dev/readme/${{ github.run_number }}/README.md \
+      #       --key "${{ secrets.PRIVATE_KEY }}" \
+      #       --predicate ./sign.json --predicate-type https://jfrog.com/evidence/signature/v1
 
-      - name: Sign build evidence  
-        run: |
-          echo '{ "actor": "${{ github.actor }}", "date": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'" }' > sign.json
-          jf evd create --build-name ${{ vars.BUILD_NAME }} --build-number ${{ github.run_number }} \
-            --predicate ./sign.json --predicate-type https://jfrog.com/evidence/build-signature/v1 \
-            --key "${{ secrets.PRIVATE_KEY }}"
-          echo ' Evidence attached: `build-signature` ' >> $GITHUB_STEP_SUMMARY
+
+      # - name: Publish build info  
+      #   run: jfrog rt build-publish ${{ vars.BUILD_NAME }} ${{ github.run_number }}
+
+      # - name: Sign build evidence  
+      #   run: |
+      #     echo '{ "actor": "${{ github.actor }}", "date": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'" }' > sign.json
+      #     jf evd create --build-name ${{ vars.BUILD_NAME }} --build-number ${{ github.run_number }} \
+      #       --predicate ./sign.json --predicate-type https://jfrog.com/evidence/build-signature/v1 \
+      #       --key "${{ secrets.PRIVATE_KEY }}"
+      #     echo ' Evidence attached: `build-signature` ' >> $GITHUB_STEP_SUMMARY
 
 
       - name: Attest Docker image (provenance)
