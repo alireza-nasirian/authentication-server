@@ -100,6 +100,20 @@ jobs:
           echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
           echo "JAR sha256: $SHA"
 
+      - name: Create predicate file
+        run: |
+          mkdir -p target
+          cat > target/evidence-build.json <<'JSON'
+          {
+            "buildName": "${{ env.BUILD_NAME }}",
+            "buildNumber": "${{ env.BUILD_NUMBER }}",
+            "commit": "${{ github.sha }}",
+            "repository": "${{ github.repository }}",
+            "runId": "${{ github.run_id }}"
+          }
+          JSON
+          ls -la target
+
       - name: Create Evidence for JAR (signed metadata)
         env:
           JFROG_CLI_BUILD_NAME: ${{ env.BUILD_NAME }}
