@@ -120,7 +120,7 @@ jobs:
           JFROG_CLI_BUILD_NUMBER: ${{ github.run_number }}
           JFROG_CLI_SIGNING_KEY: github-actions-evidence-key
         run: |
-          SUBJECT_REPO_PATH="${JF_MAVEN_DEPLOY_REPO}/${BUILD_NAME}/${{ github.run_number }}/$(basename "${{ steps.jar.outputs.jar_path }}")"
+          SUBJECT_REPO_PATH="${JF_MAVEN_DEPLOY_REPO}/${BUILD_NAME}/${{ github.run_number }}/target/$(basename "${{ steps.jar.outputs.jar_path }}")"
 
           jf evd create \
             --subject-repo-path "$SUBJECT_REPO_PATH" \
