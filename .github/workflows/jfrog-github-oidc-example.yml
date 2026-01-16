@@ -151,13 +151,30 @@ jobs:
           tags: |
             ${{ env.JF_REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.run_number }}
 
-      - name: Evidence on docker  
+      - name: Evidence on docker
+        shell: bash
         run: |
+          set -euo pipefail
+
+          # Build a small predicate
           echo '{ "actor": "${{ github.actor }}", "date": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'" }' > sign.json
-          jf evd create --package-name example-project-app --package-version ${{ github.run_number }} --package-repo-name docker-trial/authenticationserver \
+
+          # DOCKER_IMAGE_NAME example: docker-trial/authenticationserver
+          DOCKER_REPO_KEY="${DOCKER_IMAGE_NAME%%/*}"
+          DOCKER_PACKAGE_NAME="${DOCKER_IMAGE_NAME#*/}"
+
+          echo "Repo key: $DOCKER_REPO_KEY"
+          echo "Package name: $DOCKER_PACKAGE_NAME"
+
+          jf evd create \
+            --package-repo-name "$DOCKER_REPO_KEY" \
+            --package-name "$DOCKER_PACKAGE_NAME" \
+            --package-version "${{ github.run_number }}" \
             --key "${{ secrets.PRIVATE_KEY }}" \
-            --predicate ./sign.json --predicate-type https://jfrog.com/evidence/signature/v1
-          echo ' Evidence attached: `signature` '
+            --predicate ./sign.json \
+            --predicate-type "https://jfrog.com/evidence/signature/v1"
+
+          echo 'Evidence attached: `signature`'
 
       - name: Upload readme file  
         run: |
