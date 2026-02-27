@@ -44,16 +44,16 @@ jobs:
           oidc-provider-name: ${{ env.OIDC_PROVIDER_NAME }}
           oidc-audience: ${{ env.OIDC_AUDIENCE }}
 
-      # 🔥 Proper Maven configuration
-      - name: Configure Maven for Artifactory
+      - name: Configure Maven
         run: |
-          jf rt mvnc \
+          jf mvnc \
             --server-id-resolve=artifactory \
             --server-id-deploy=artifactory \
+            --repo-resolve-releases=${JF_MAVEN_DEPLOY_REPO} \
+            --repo-resolve-snapshots=${JF_MAVEN_DEPLOY_REPO} \
             --repo-deploy-releases=${JF_MAVEN_DEPLOY_REPO} \
             --repo-deploy-snapshots=${JF_MAVEN_DEPLOY_REPO}
 
-      # 🔥 Deploy using Maven (NO manual upload)
       - name: Maven Build & Deploy
         env:
           JFROG_CLI_BUILD_NAME: ${{ env.BUILD_NAME }}
