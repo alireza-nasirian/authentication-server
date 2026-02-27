@@ -104,7 +104,7 @@ jobs:
           JSON
           ls -la target
 
-      # - name: Create Evidence for JAR (signed metadata)
+      # - name: Create Evidence for JAR (signed metadata)  
       #   env:
       #     JFROG_CLI_BUILD_NAME: ${{ env.BUILD_NAME }}
       #     JFROG_CLI_BUILD_NUMBER: ${{ github.run_number }}
