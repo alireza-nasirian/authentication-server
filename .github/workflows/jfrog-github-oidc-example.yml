@@ -121,7 +121,7 @@ jobs:
       # ---- Docker part (matches the GitHub blog demo pattern) ----
       # Note: JF_REGISTRY must be a valid docker registry host, e.g. trialxxxx.jfrog.io
       # If you set JF_REGISTRY as "https://trialxxxx.jfrog.io", docker/login-action accepts it,
-      # but if you hit issues, set it as "trialxxxx.jfrog.io" (no scheme).
+      # but if you hit issues, set it as "trialxxxx.jfrog.io" (no scheme).  
       - name: Docker login to JFrog registry
         uses: docker/login-action@v3
         with:
