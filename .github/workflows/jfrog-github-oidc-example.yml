@@ -47,10 +47,7 @@ jobs:
       - name: Configure Maven
         run: |
           jf mvnc \
-            --server-id-resolve=setup-jfrog-cli-server \
             --server-id-deploy=setup-jfrog-cli-server \
-            --repo-resolve-releases=${JF_MAVEN_DEPLOY_REPO} \
-            --repo-resolve-snapshots=${JF_MAVEN_DEPLOY_REPO} \
             --repo-deploy-releases=${JF_MAVEN_DEPLOY_REPO} \
             --repo-deploy-snapshots=${JF_MAVEN_DEPLOY_REPO}
             
