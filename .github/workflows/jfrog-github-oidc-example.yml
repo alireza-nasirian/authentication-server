@@ -181,7 +181,7 @@ jobs:
       #     jf evd create --build-name ${{ vars.BUILD_NAME }} --build-number ${{ github.run_number }} \
       #       --predicate ./sign.json --predicate-type https://jfrog.com/evidence/build-signature/v1 \
       #       --key "${{ secrets.PRIVATE_KEY }}"
-      #     echo ' Evidence attached: `build-signature` ' >> $GITHUB_STEP_SUMMARY
+      #     echo ' Evidence attached: `build-signature` ' >> $GITHUB_STEP_SUMMARY 
 
 
       - name: Attest Docker image (provenance)
