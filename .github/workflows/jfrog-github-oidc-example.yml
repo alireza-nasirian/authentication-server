@@ -45,8 +45,18 @@ jobs:
           oidc-provider-name: ${{ env.OIDC_PROVIDER_NAME }}
           oidc-audience: ${{ env.OIDC_AUDIENCE }}
           
-      - name: Maven build & test
-        run: mvn -B -ntp clean deploy
+      - name: Configure Maven
+        run: |
+          jf mvn-config \
+            --repo-deploy-releases ${JF_MAVEN_DEPLOY_REPO} \
+            --repo-deploy-snapshots ${JF_MAVEN_DEPLOY_REPO}
+
+      - name: Maven build & deploy
+        env:
+          JFROG_CLI_BUILD_NAME: ${{ env.BUILD_NAME }}
+          JFROG_CLI_BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          jf mvn -B -ntp clean deploy
         
       - name: Find built JAR
         id: jar
