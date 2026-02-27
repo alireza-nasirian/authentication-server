@@ -33,7 +33,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
-          mvn-version: "3.8.8"
+          mvn-version: "3.9.6"
           cache: maven
 
       - name: Setup JFrog CLI (OIDC)
@@ -56,6 +56,7 @@ jobs:
         env:
           JFROG_CLI_BUILD_NAME: ${{ env.BUILD_NAME }}
           JFROG_CLI_BUILD_NUMBER: ${{ github.run_number }}
+          JFROG_RUN_NATIVE: "true"
         run: |
           jf mvn -B -ntp clean install
 
