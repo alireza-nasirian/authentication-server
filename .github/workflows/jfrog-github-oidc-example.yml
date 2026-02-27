@@ -12,7 +12,6 @@ env:
   OIDC_AUDIENCE: ${{ vars.OIDC_AUDIENCE }}
   JF_MAVEN_DEPLOY_REPO: ${{ vars.JF_MAVEN_DEPLOY_REPO }}
   DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
-
   BUILD_NAME: authentication-server
 
 jobs:
@@ -22,8 +21,8 @@ jobs:
 
     permissions:
       contents: read
-      attestations: write   
-      id-token: write      
+      id-token: write
+      attestations: write
 
     steps:
       - name: Checkout
@@ -44,110 +43,44 @@ jobs:
         with:
           oidc-provider-name: ${{ env.OIDC_PROVIDER_NAME }}
           oidc-audience: ${{ env.OIDC_AUDIENCE }}
-          
-      # - name: Configure Maven
-      #   run: |
-      #     jf mvn-config \
-      #       --repo-deploy-releases ${JF_MAVEN_DEPLOY_REPO} \
-      #       --repo-deploy-snapshots ${JF_MAVEN_DEPLOY_REPO}
 
-      # - name: Maven build & deploy
-      #   env:
-      #     JFROG_CLI_BUILD_NAME: ${{ env.BUILD_NAME }}
-      #     JFROG_CLI_BUILD_NUMBER: ${{ github.run_number }}
-      #   run: |
-      #     jf mvn -B -ntp clean deploy
-
-
-      - name: Configure Maven settings for Artifactory
+      # 🔥 Proper Maven configuration
+      - name: Configure Maven for Artifactory
         run: |
           jf rt mvnc \
-            --repo-deploy-releases ${JF_MAVEN_DEPLOY_REPO} \
-            --repo-deploy-snapshots ${JF_MAVEN_DEPLOY_REPO}
+            --server-id-resolve=artifactory \
+            --server-id-deploy=artifactory \
+            --repo-deploy-releases=${JF_MAVEN_DEPLOY_REPO} \
+            --repo-deploy-snapshots=${JF_MAVEN_DEPLOY_REPO}
 
-
-      - name: Maven deploy
+      # 🔥 Deploy using Maven (NO manual upload)
+      - name: Maven Build & Deploy
         env:
           JFROG_CLI_BUILD_NAME: ${{ env.BUILD_NAME }}
           JFROG_CLI_BUILD_NUMBER: ${{ github.run_number }}
         run: |
           mvn -B -ntp clean deploy
-        
-      - name: Find built JAR
+
+      # 🔥 Publish build-info
+      - name: Publish Build Info
+        run: |
+          jf rt bp $BUILD_NAME ${{ github.run_number }}
+
+      # 🔥 Find built JAR (for attestation only)
+      - name: Locate built JAR
         id: jar
-        shell: bash
         run: |
-          JAR_PATH="$(ls -1 target/*.jar | grep -vE '(-sources|-javadoc)\.jar$' | head -n 1)"
-          if [ -z "$JAR_PATH" ]; then
-            echo "No jar found under target/"
-            ls -la target || true
-            exit 1
-          fi
+          JAR_PATH=$(ls target/*.jar | grep -vE '(-sources|-javadoc)\.jar$' | head -n 1)
           echo "jar_path=$JAR_PATH" >> "$GITHUB_OUTPUT"
-          echo "Found JAR: $JAR_PATH"
-
-      - name: Upload JAR to Artifactory (with build-info)
-        env:
-          JFROG_CLI_BUILD_NAME: ${{ env.BUILD_NAME }}
-          JFROG_CLI_BUILD_NUMBER: ${{ github.run_number }}
-        run: |
-          jf rt ping
-          jf rt u "${{ steps.jar.outputs.jar_path }}" \
-            "${JF_MAVEN_DEPLOY_REPO}/${BUILD_NAME}/${{ github.run_number }}/"
-
-      - name: Publish build-info to Artifactory
-        env:
-          JFROG_CLI_BUILD_NAME: ${{ env.BUILD_NAME }}
-          JFROG_CLI_BUILD_NUMBER: ${{ github.run_number }}
-        run: |
-          jf rt bp "${JFROG_CLI_BUILD_NAME}" "${JFROG_CLI_BUILD_NUMBER}"
 
       - name: Attest JAR (provenance)
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: ${{ steps.jar.outputs.jar_path }}
 
-      - name: Compute JAR sha256
-        id: jarsha
-        shell: bash
-        run: |
-          SHA="$(sha256sum "${{ steps.jar.outputs.jar_path }}" | awk '{print $1}')"
-          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
-          echo "JAR sha256: $SHA"
+      # ---------------- DOCKER ----------------
 
-      - name: Create predicate file
-        run: |
-          mkdir -p target
-          cat > target/evidence-build.json <<'JSON'
-          {
-            "buildName": "${{ env.BUILD_NAME }}",
-            "buildNumber": "${{ env.BUILD_NUMBER }}",
-            "commit": "${{ github.sha }}",
-            "repository": "${{ github.repository }}",
-            "runId": "${{ github.run_id }}"
-          }
-          JSON
-          ls -la target
-
-      # - name: Create Evidence for JAR (signed metadata)  
-      #   env:
-      #     JFROG_CLI_BUILD_NAME: ${{ env.BUILD_NAME }}
-      #     JFROG_CLI_BUILD_NUMBER: ${{ github.run_number }}
-      #   run: |
-      #     SUBJECT_REPO_PATH="${JF_MAVEN_DEPLOY_REPO}/${BUILD_NAME}/${{ github.run_number }}/target/$(basename "${{ steps.jar.outputs.jar_path }}")"
-
-      #     jf evd create \
-      #       --subject-repo-path "$SUBJECT_REPO_PATH" \
-      #       --subject-sha256 "${{ steps.jarsha.outputs.sha256 }}" \
-      #       --predicate ./target/evidence-build.json \
-      #       --predicate-type "https://jfrog.com/evidence/approval/v1" \  
-      #       --provider-id "github-actions"
-
-      # ---- Docker part (matches the GitHub blog demo pattern) ----
-      # Note: JF_REGISTRY must be a valid docker registry host, e.g. trialxxxx.jfrog.io
-      # If you set JF_REGISTRY as "https://trialxxxx.jfrog.io", docker/login-action accepts it,
-      # but if you hit issues, set it as "trialxxxx.jfrog.io" (no scheme).  
-      - name: Docker login to JFrog registry
+      - name: Docker login to JFrog
         uses: docker/login-action@v3
         with:
           registry: ${{ env.JF_REGISTRY }}
@@ -157,7 +90,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build & push Docker image
+      - name: Build & Push Docker Image
         id: build-and-push
         uses: docker/build-push-action@v6
         with:
@@ -166,50 +99,7 @@ jobs:
           tags: |
             ${{ env.JF_REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.run_number }}
 
-      # - name: Evidence on docker
-      #   shell: bash
-      #   run: |
-      #     set -euo pipefail
-
-      #     # Optional: small predicate payload
-      #     cat > sign.json <<'JSON'
-      #     {
-      #       "actor": "${{ github.actor }}",
-      #       "run_id": "${{ github.run_id }}",
-      #       "sha": "${{ github.sha }}"
-      #     }
-      #     JSON
-
-      #     jf evd create \
-      #     --package-repo-name "docker-trial" \
-      #     --package-name "authenticationserver" \
-      #     --package-version "${{ github.run_number }}" \
-      #     --key "${{ secrets.PRIVATE_KEY }}" \
-      #     --predicate ./sign.json \
-      #     --predicate-type "https://jfrog.com/evidence/signature/v1"
-
-
-      # - name: Upload readme file  
-      #   run: |
-      #     jf rt upload ./README.md example-project-generic-dev/readme/${{ github.run_number }}/ --build-name ${{ vars.BUILD_NAME }} --build-number ${{ github.run_number }}
-      #     jf evd create --subject-repo-path example-project-generic-dev/readme/${{ github.run_number }}/README.md \
-      #       --key "${{ secrets.PRIVATE_KEY }}" \
-      #       --predicate ./sign.json --predicate-type https://jfrog.com/evidence/signature/v1
-
-
-      # - name: Publish build info  
-      #   run: jfrog rt build-publish ${{ vars.BUILD_NAME }} ${{ github.run_number }}
-
-      # - name: Sign build evidence  
-      #   run: |
-      #     echo '{ "actor": "${{ github.actor }}", "date": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'" }' > sign.json
-      #     jf evd create --build-name ${{ vars.BUILD_NAME }} --build-number ${{ github.run_number }} \
-      #       --predicate ./sign.json --predicate-type https://jfrog.com/evidence/build-signature/v1 \
-      #       --key "${{ secrets.PRIVATE_KEY }}"
-      #     echo ' Evidence attached: `build-signature` ' >> $GITHUB_STEP_SUMMARY 
-
-
-      - name: Attest Docker image (provenance)
+      - name: Attest Docker Image (provenance)
         uses: actions/attest-build-provenance@v2
         with:
           subject-name: oci://${{ env.JF_REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}
