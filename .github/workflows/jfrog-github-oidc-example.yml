@@ -46,8 +46,8 @@ jobs:
           oidc-audience: ${{ env.OIDC_AUDIENCE }}
           
       - name: Maven build & test
-        run: mvn -B -ntp test package
-
+        run: mvn -B -ntp clean deploy
+        
       - name: Find built JAR
         id: jar
         shell: bash
