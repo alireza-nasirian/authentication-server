@@ -116,7 +116,7 @@
 <distributionManagement>
   <repository>
     <id>artifactory</id>
-    <url>https://trialrf61gg.jfrog.io/artifactory/YOUR_MAVEN_REPO</url>
+    <url>https://trialrf61gg.jfrog.io/artifactory/authenticationserver</url>
   </repository>
 </distributionManagement>
 
