@@ -59,7 +59,7 @@ jobs:
           JFROG_CLI_BUILD_NAME: ${{ env.BUILD_NAME }}
           JFROG_CLI_BUILD_NUMBER: ${{ github.run_number }}
         run: |
-          mvn -B -ntp clean deploy
+          jf mvn -B -ntp clean install
 
       # 🔥 Publish build-info
       - name: Publish Build Info
