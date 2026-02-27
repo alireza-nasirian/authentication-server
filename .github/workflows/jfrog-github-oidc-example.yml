@@ -33,7 +33,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
-          mvn-version: "3.9.11"
+          mvn-version: "3.8.8"
           cache: maven
 
       - name: Setup JFrog CLI (OIDC)
