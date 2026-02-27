@@ -115,7 +115,7 @@ jobs:
       #       --subject-repo-path "$SUBJECT_REPO_PATH" \
       #       --subject-sha256 "${{ steps.jarsha.outputs.sha256 }}" \
       #       --predicate ./target/evidence-build.json \
-      #       --predicate-type "https://jfrog.com/evidence/approval/v1" \
+      #       --predicate-type "https://jfrog.com/evidence/approval/v1" \  
       #       --provider-id "github-actions"
 
       # ---- Docker part (matches the GitHub blog demo pattern) ----
